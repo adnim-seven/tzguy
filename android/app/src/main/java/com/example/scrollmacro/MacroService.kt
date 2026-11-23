@@ -89,9 +89,9 @@ class MacroService : AccessibilityService() {
     private suspend fun topLuma(p: Prefs): Stitcher.Luma? {
         val bmp = shot() ?: return null
         screenW = bmp.width; screenH = bmp.height
-        statusTop = (bmp.height * 0.04).toInt()
-        val end = (bmp.height * p.topPct / 100.0).toInt().coerceAtLeast(statusTop + 50)
-        return Stitcher.luma(bmp, statusTop, bmp.height - end)
+        val start = (bmp.height * p.regionTop / 100.0).toInt()
+        val end = (bmp.height * p.topPct / 100.0).toInt().coerceAtLeast(start + 50)
+        return Stitcher.luma(bmp, start, bmp.height - end)
     }
 
     /** before 와 달라진 뒤, 연속 2번 같아질 때(=다 바뀜)까지 대기. 시간 내 못 하면 false */
@@ -106,7 +106,7 @@ class MacroService : AccessibilityService() {
             if (!changed) {
                 if (Stitcher.diff(before, cur) > 3.0) { changed = true; prev = cur }
             } else {
-                if (Stitcher.diff(prev!!, cur) < 0.7) stableCount++ else stableCount = 0
+                if (Stitcher.diff(prev!!, cur) < 0.7 && !Stitcher.isBlank(cur)) stableCount++ else stableCount = 0
                 prev = cur
                 if (stableCount >= 2) return true
             }
@@ -122,7 +122,7 @@ class MacroService : AccessibilityService() {
         while (System.currentTimeMillis() < deadline) {
             delay(1200)
             val cur = topLuma(p) ?: continue
-            if (Stitcher.diff(prev, cur) < 0.7) stableCount++ else stableCount = 0
+            if (Stitcher.diff(prev, cur) < 0.7 && !Stitcher.isBlank(cur)) stableCount++ else stableCount = 0
             prev = cur
             if (stableCount >= 2) return true
         }
@@ -159,6 +159,7 @@ class MacroService : AccessibilityService() {
 
     // ---------- 스크롤 캡처 ----------
     private suspend fun scrollCapture(p: Prefs): Bitmap? {
+        if (!p.scroll) return shot() // 스크롤 없이 현재 화면 1장
         val first0 = shot() ?: return null
         val top = (first0.height * 0.04).toInt()
         val bottom = (first0.height * 0.05).toInt()

@@ -28,6 +28,13 @@ object Stitcher {
         })
     }
 
+    /** 거의 전부 흰색/빈 화면이면 true (이미지 로딩 전 상태) */
+    fun isBlank(l: Luma): Boolean {
+        var white = 0; var n = 0
+        for (y in l.rows.indices step 3) for (v in l.rows[y]) { n++; if (v > 245) white++ }
+        return n > 0 && white.toDouble() / n > 0.97
+    }
+
     /** 두 Luma의 평균 밝기 차이 (0~255). 크기가 다르면 큰 값 반환 */
     fun diff(a: Luma, b: Luma): Double {
         if (a.rows.size != b.rows.size) return 255.0

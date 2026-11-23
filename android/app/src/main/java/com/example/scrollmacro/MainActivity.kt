@@ -33,10 +33,12 @@ class MainActivity : Activity() {
         val nextY = field("위치 Y %", p.nextY.toString(), true)
 
         label("공통")
-        val topPct = field("이미지 확인 영역: 화면 위쪽 몇 %까지", p.topPct.toString(), true)
+        val regionTop = field("이미지 확인 영역 시작: 화면 위에서 몇 %부터 (헤더 제외)", p.regionTop.toString(), true)
+        val topPct = field("이미지 확인 영역 끝: 화면 위에서 몇 %까지", p.topPct.toString(), true)
         val wait = field("⑥ 로딩 대기 최대 시간(초)", p.waitSec.toString(), true)
         val rounds = field("반복 횟수", p.rounds.toString(), true)
         val pages = field("스크롤 캡처 최대 페이지 수", p.maxPages.toString(), true)
+        val scroll = CheckBox(this).apply { text = "스크롤 캡처 사용 (끄면 현재 화면 1장만)"; isChecked = p.scroll; root.addView(this) }
         val first = CheckBox(this).apply { text = "① 라운드 시작 때도 캡처"; isChecked = p.captureFirst; root.addView(this) }
 
         fun n(e: EditText, d: Int, lo: Int = 0, hi: Int = 100000) = e.text.toString().toIntOrNull()?.coerceIn(lo, hi) ?: d
@@ -45,7 +47,7 @@ class MainActivity : Activity() {
             p.maxTaps = n(maxTaps, 5, 1); p.tapWaitSec = n(tapWait, 4, 1)
             p.next = next.text.toString().trim()
             p.nextX = n(nextX, 90, 0, 100); p.nextY = n(nextY, 90, 0, 100)
-            p.topPct = n(topPct, 30, 10, 90); p.waitSec = n(wait, 15, 1)
+            p.regionTop = n(regionTop, 13, 0, 80); p.topPct = n(topPct, 54, 10, 95); p.scroll = scroll.isChecked; p.waitSec = n(wait, 15, 1)
             p.rounds = n(rounds, 10, 1); p.maxPages = n(pages, 15, 1)
             p.captureFirst = first.isChecked
         }

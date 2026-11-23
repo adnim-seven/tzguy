@@ -10,16 +10,17 @@ class Prefs(ctx: Context) {
 
     /** 이미지 변화를 확인하려고 누를 위치 (화면 대비 %) */
     var tapX: Int get() = i("tapX", 50); set(v) = si("tapX", v)
-    var tapY: Int get() = i("tapY", 50); set(v) = si("tapY", v)
+    var tapY: Int get() = i("tapY", 34); set(v) = si("tapY", v)
     /** 이미지가 안 바뀌면 다시 탭하는 최대 횟수 / 탭 후 변화를 기다리는 시간(초) */
     var maxTaps: Int get() = i("maxTaps", 5); set(v) = si("maxTaps", v)
     var tapWaitSec: Int get() = i("tapWaitSec", 4); set(v) = si("tapWaitSec", v)
     /** '다음 넘어가기' 버튼: 글자로 찾기 (비우면 아래 좌표를 탭) */
     var next: String get() = s("next", ""); set(v) = sp.edit().putString("next", v).apply()
-    var nextX: Int get() = i("nextX", 90); set(v) = si("nextX", v)
-    var nextY: Int get() = i("nextY", 90); set(v) = si("nextY", v)
-    /** 상단 이미지 영역 높이 (화면 높이 대비 %) */
-    var topPct: Int get() = i("topPct", 30); set(v) = si("topPct", v)
+    var nextX: Int get() = i("nextX", 22); set(v) = si("nextX", v)
+    var nextY: Int get() = i("nextY", 65); set(v) = si("nextY", v)
+    /** 이미지 확인 영역: 위쪽 시작 % (헤더/타이머 제외) ~ 아래쪽 끝 % */
+    var regionTop: Int get() = i("regionTop", 13); set(v) = si("regionTop", v)
+    var topPct: Int get() = i("topPct", 54); set(v) = si("topPct", v)
     /** 로딩 대기 최대 시간(초) */
     var waitSec: Int get() = i("waitSec", 15); set(v) = si("waitSec", v)
     var rounds: Int get() = i("rounds", 10); set(v) = si("rounds", v)
@@ -28,4 +29,8 @@ class Prefs(ctx: Context) {
     var captureFirst: Boolean
         get() = sp.getBoolean("captureFirst", true)
         set(v) = sp.edit().putBoolean("captureFirst", v).apply()
+    /** 스크롤 캡처 사용 여부 (끄면 현재 화면 1장만 캡처, 스와이프 안 함) */
+    var scroll: Boolean
+        get() = sp.getBoolean("scroll", false)
+        set(v) = sp.edit().putBoolean("scroll", v).apply()
 }

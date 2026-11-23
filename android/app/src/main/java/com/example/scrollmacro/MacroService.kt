@@ -47,7 +47,8 @@ class MacroService : AccessibilityService() {
     private suspend fun runMacro(p: Prefs) {
         delay(5000) // 대상 화면으로 이동할 시간
         for (round in 1..p.rounds) {
-            toast("라운드 $round / ${p.rounds}")
+            if (p.todayCount() >= p.dailyLimit) { toast("오늘 ${p.dailyLimit}세트를 모두 채워 종료"); return }
+            toast("라운드 $round / ${p.rounds} (오늘 ${p.todayCount()}/${p.dailyLimit})")
 
             // 첫 라운드는 사진이 뜰 때까지(흰색 아님 + 안정) 기다린 뒤 캡처
             if (round == 1 && !waitStable(p, p.waitSec)) { toast("로딩이 ${p.waitSec}초 안에 안 끝나 종료"); return }
@@ -58,7 +59,7 @@ class MacroService : AccessibilityService() {
                 save(img, round, "l")
             }
 
-            // 2~4) 중앙 지정 위치 탭 → 상단 이미지가 바뀌었는지 확인, 안 바뀌면 다시 탭
+            // 2~4) 지정 위치 탭 → 상단 이미지가 바뀌었는지 확인, 안 바뀌면 다시 탭
             val before = topLuma(p) ?: run { toast("스크린샷 실패"); return }
             var changed = false
             for (attempt in 1..p.maxTaps) {
@@ -72,12 +73,13 @@ class MacroService : AccessibilityService() {
             val img = scrollCapture(p) ?: run { toast("캡처 실패"); return }
             save(img, round, "r")
 
-            // 5) 다음 넘어가기 버튼 클릭
-            if (round < p.rounds) {
-                val ok = if (p.next.isNotBlank()) clickByText(p.next) else tap(p.nextX, p.nextY)
-                if (!ok) { toast("다음 버튼을 누르지 못해 종료"); return }
+            // 5) 다음 넘어가기(LIKE) — 마지막 세트에도 누른다. 한 세트 완료로 집계
+            val ok = if (p.next.isNotBlank()) clickByText(p.next) else tap(p.nextX, p.nextY)
+            if (!ok) { toast("다음 버튼을 누르지 못해 종료"); return }
+            p.addToday()
 
-                // 6) 다음 화면 이미지 로딩 대기
+            // 6) 계속할 거라면 다음 카드 이미지 로딩 대기
+            if (round < p.rounds && p.todayCount() < p.dailyLimit) {
                 delay(1500)
                 if (!waitStable(p, p.waitSec)) { toast("로딩이 ${p.waitSec}초 안에 안 끝나 종료"); return }
             }

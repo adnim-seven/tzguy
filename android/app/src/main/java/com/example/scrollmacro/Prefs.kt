@@ -23,7 +23,7 @@ class Prefs(ctx: Context) {
     var topPct: Int get() = i("topPct", 54); set(v) = si("topPct", v)
     /** 로딩 대기 최대 시간(초) */
     var waitSec: Int get() = i("waitSec", 15); set(v) = si("waitSec", v)
-    var rounds: Int get() = i("rounds", 10); set(v) = si("rounds", v)
+    var rounds: Int get() = i("rounds", 200); set(v) = si("rounds", v)
     var maxPages: Int get() = i("maxPages", 15); set(v) = si("maxPages", v)
     /** 라운드 시작 때(탭 전) 캡처 여부 */
     var captureFirst: Boolean
@@ -33,4 +33,18 @@ class Prefs(ctx: Context) {
     var scroll: Boolean
         get() = sp.getBoolean("scroll", false)
         set(v) = sp.edit().putBoolean("scroll", v).apply()
+
+    /** 하루 최대 세트 수 (앱을 껐다 켜도 날짜별로 합산, 자정에 초기화) */
+    var dailyLimit: Int get() = i("dailyLimit", 200); set(v) = si("dailyLimit", v)
+
+    private fun today() = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US).format(java.util.Date())
+
+    /** 오늘 지금까지 한 세트 수 */
+    fun todayCount(): Int = if (s("dailyDate", "") == today()) i("dailyCount", 0) else 0
+
+    fun addToday() {
+        sp.edit().putString("dailyDate", today()).putInt("dailyCount", todayCount() + 1).apply()
+    }
+
+    fun resetToday() { sp.edit().putInt("dailyCount", 0).putString("dailyDate", today()).apply() }
 }

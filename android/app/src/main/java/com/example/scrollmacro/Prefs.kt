@@ -16,7 +16,7 @@ class Prefs(ctx: Context) {
     var tapWaitSec: Int get() = i("tapWaitSec", 4); set(v) = si("tapWaitSec", v)
     /** '다음 넘어가기' 버튼: 글자로 찾기 (비우면 아래 좌표를 탭) */
     var next: String get() = s("next", ""); set(v) = sp.edit().putString("next", v).apply()
-    var nextX: Int get() = i("nextX", 22); set(v) = si("nextX", v)
+    var nextX: Int get() = i("nextX", 77); set(v) = si("nextX", v)
     var nextY: Int get() = i("nextY", 65); set(v) = si("nextY", v)
     /** 이미지 확인 영역: 위쪽 시작 % (헤더/타이머 제외) ~ 아래쪽 끝 % */
     var regionTop: Int get() = i("regionTop", 13); set(v) = si("regionTop", v)

@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">ScrollMacro</string>
+    <string name="service_desc">조건이 맞으면 화면을 스크롤하며 캡처합니다.</string>
+</resources>

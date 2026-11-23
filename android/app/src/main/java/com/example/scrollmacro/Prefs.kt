@@ -52,4 +52,9 @@ class Prefs(ctx: Context) {
     var m2Top: Boolean
         get() = sp.getBoolean("m2Top", false)
         set(v) = sp.edit().putBoolean("m2Top", v).apply()
+
+    /** 스크롤 캡처 시 원본 프레임도 PNG로 저장 (PC에서 다시 합칠 때 사용) */
+    var saveRaw: Boolean
+        get() = sp.getBoolean("saveRaw", true)
+        set(v) = sp.edit().putBoolean("saveRaw", v).apply()
 }

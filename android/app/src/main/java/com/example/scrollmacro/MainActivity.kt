@@ -40,6 +40,7 @@ class MainActivity : Activity() {
         val rounds = field("이번 실행 반복 횟수", p.rounds.toString(), true)
         val pages = field("스크롤 캡처 최대 페이지 수", p.maxPages.toString(), true)
         val scroll = CheckBox(this).apply { text = "스크롤 캡처 사용 (끄면 현재 화면 1장만)"; isChecked = p.scroll; root.addView(this) }
+        val raw = CheckBox(this).apply { text = "스크롤 캡처 시 원본 프레임도 저장 (PC에서 다시 합치기용)"; isChecked = p.saveRaw; root.addView(this) }
         val first = CheckBox(this).apply { text = "① 라운드 시작 때도 캡처"; isChecked = p.captureFirst; root.addView(this) }
 
         fun n(e: EditText, d: Int, lo: Int = 0, hi: Int = 100000) = e.text.toString().toIntOrNull()?.coerceIn(lo, hi) ?: d
@@ -48,7 +49,7 @@ class MainActivity : Activity() {
             p.maxTaps = n(maxTaps, 5, 1); p.tapWaitSec = n(tapWait, 4, 1)
             p.next = next.text.toString().trim()
             p.nextX = n(nextX, 90, 0, 100); p.nextY = n(nextY, 90, 0, 100)
-            p.regionTop = n(regionTop, 13, 0, 80); p.topPct = n(topPct, 54, 10, 95); p.scroll = scroll.isChecked; p.waitSec = n(wait, 15, 1)
+            p.regionTop = n(regionTop, 13, 0, 80); p.topPct = n(topPct, 54, 10, 95); p.scroll = scroll.isChecked; p.saveRaw = raw.isChecked; p.waitSec = n(wait, 15, 1)
             p.dailyLimit = n(daily, 200, 1); p.rounds = n(rounds, 200, 1); p.maxPages = n(pages, 15, 1)
             p.captureFirst = first.isChecked
         }

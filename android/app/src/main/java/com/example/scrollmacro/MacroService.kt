@@ -243,8 +243,10 @@ class MacroService : AccessibilityService() {
     }
 
     // ---------- 스크롤 캡처 ----------
+    private var lastFrames: List<Bitmap> = emptyList()
+
     private suspend fun scrollCapture(p: Prefs, force: Boolean = false, fromTop: Boolean = true): Bitmap? {
-        if (!p.scroll && !force) return shot() // 스크롤 없이 현재 화면 1장
+        if (!p.scroll && !force) { lastFrames = emptyList(); return shot() } // 스크롤 없이 현재 화면 1장
         val first0 = shot() ?: return null
         val top = (first0.height * 0.04).toInt()
         val bottom = (first0.height * 0.05).toInt()
@@ -277,6 +279,7 @@ class MacroService : AccessibilityService() {
             shifts += if (d == Stitcher.FAIL) h else d
             prevL = luma
         }
+        lastFrames = frames
         return Stitcher.stitch(frames, shifts, top, bottom)
     }
 
@@ -307,11 +310,20 @@ class MacroService : AccessibilityService() {
 
     private fun save(bmp: Bitmap, round: Int, tag: String) {
         val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
-        val name = "${stamp}_$tag.png" // 예: 20261123_153045_l.png
+        insertPng(bmp, "${stamp}_$tag.png", "Pictures/ScrollMacro") // 예: 20261123_153045_l.png
+        // 스크롤 캡처였다면 원본 프레임도 폴더에 저장 (Pictures/ScrollMacro/raw/<이름>/01.png ...)
+        if (Prefs(this).saveRaw && lastFrames.size > 1) {
+            lastFrames.forEachIndexed { i, f ->
+                insertPng(f, "%02d.png".format(i + 1), "Pictures/ScrollMacro/raw/${stamp}_$tag")
+            }
+        }
+    }
+
+    private fun insertPng(bmp: Bitmap, name: String, relPath: String) {
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/ScrollMacro")
+            put(MediaStore.Images.Media.RELATIVE_PATH, relPath)
         }
         val uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
         contentResolver.openOutputStream(uri)!!.use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }

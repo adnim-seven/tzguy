@@ -65,7 +65,7 @@ class MainActivity : Activity() {
             setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
         })
         root.addView(TextView(this).apply {
-            text = "흐름: ①캡처 → ②지정 위치 탭 → ③이미지 변경 확인 → ④안 바뀌면 재탭 → ⑤캡처 후 다음 버튼 → ⑥로딩 대기 → 반복\n결과: 사진 > Pictures/ScrollMacro (r1a=탭 전, r1b=탭 후)"
+            text = "흐름: ①캡처 → ②지정 위치 탭 → ③이미지 변경 확인 → ④안 바뀌면 재탭 → ⑤캡처 후 다음 버튼 → ⑥로딩 대기 → 반복\n결과: 사진 > Pictures/ScrollMacro (파일명: 년월일_시분초_l=탭 전, _r=탭 후)"
         })
         setContentView(ScrollView(this).apply { addView(root) })
     }

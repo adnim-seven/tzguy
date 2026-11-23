@@ -52,7 +52,7 @@ class MacroService : AccessibilityService() {
             // 1) 탭 전 화면 캡처
             if (p.captureFirst) {
                 val img = scrollCapture(p) ?: run { toast("캡처 실패"); return }
-                save(img, round, "a")
+                save(img, round, "l")
             }
 
             // 2~4) 중앙 지정 위치 탭 → 상단 이미지가 바뀌었는지 확인, 안 바뀌면 다시 탭
@@ -67,7 +67,7 @@ class MacroService : AccessibilityService() {
 
             // 5) 바뀌었으면 캡처
             val img = scrollCapture(p) ?: run { toast("캡처 실패"); return }
-            save(img, round, "b")
+            save(img, round, "r")
 
             // 5) 다음 넘어가기 버튼 클릭
             if (round < p.rounds) {
@@ -220,7 +220,8 @@ class MacroService : AccessibilityService() {
     }
 
     private fun save(bmp: Bitmap, round: Int, tag: String) {
-        val name = "scroll_${System.currentTimeMillis()}_r${round}$tag.png"
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+        val name = "${stamp}_$tag.png" // 예: 20261123_153045_l.png
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")

@@ -28,6 +28,18 @@ object Stitcher {
         })
     }
 
+    /** 두 Luma의 평균 밝기 차이 (0~255). 크기가 다르면 큰 값 반환 */
+    fun diff(a: Luma, b: Luma): Double {
+        if (a.rows.size != b.rows.size) return 255.0
+        var sum = 0.0; var n = 0
+        for (y in a.rows.indices step 2) {
+            val x = a.rows[y]; val z = b.rows[y]
+            for (c in x.indices) sum += abs(x[c] - z[c])
+            n += x.size
+        }
+        return if (n == 0) 0.0 else sum / n
+    }
+
     /** 반환: 스크롤된 픽셀 수(>0), END, 또는 FAIL */
     fun findShift(prev: Luma, new: Luma, expected: Int): Int {
         val h = prev.rows.size

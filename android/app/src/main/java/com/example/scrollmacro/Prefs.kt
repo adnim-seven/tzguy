@@ -47,4 +47,9 @@ class Prefs(ctx: Context) {
     }
 
     fun resetToday() { sp.edit().putInt("dailyCount", 0).putString("dailyDate", today()).apply() }
+
+    /** 모드 2: 캡처 전에 맨 위로 올릴지 (끄면 현재 위치부터 아래로) */
+    var m2Top: Boolean
+        get() = sp.getBoolean("m2Top", false)
+        set(v) = sp.edit().putBoolean("m2Top", v).apply()
 }

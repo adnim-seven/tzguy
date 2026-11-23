@@ -4,6 +4,14 @@ import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.GestureDescription
 import android.content.ContentValues
 import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.PixelFormat
+import android.graphics.drawable.GradientDrawable
+import android.view.Gravity
+import android.view.MotionEvent
+import android.view.View
+import android.view.WindowManager
+import android.widget.TextView
 import android.graphics.Path
 import android.os.Handler
 import android.os.Looper
@@ -16,7 +24,7 @@ import kotlinx.coroutines.*
 import kotlin.coroutines.resume
 
 /**
- * 한 라운드: 캡처 → 지정 위치 탭(안 바뀌면 재탭) → 이미지 변경 확인 → 캡처 → 다음 버튼 클릭 → 로딩 대기
+ * 모드 1: 한 라운드: 캡처 → 지정 위치 탭(안 바뀌면 재탭) → 이미지 변경 확인 → 캡처 → 다음 버튼 클릭 → 로딩 대기
  */
 class MacroService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -28,8 +36,8 @@ class MacroService : AccessibilityService() {
     }
 
     override fun onServiceConnected() { instance = this }
-    override fun onUnbind(intent: android.content.Intent?): Boolean { instance = null; return super.onUnbind(intent) }
-    override fun onDestroy() { instance = null; scope.cancel(); super.onDestroy() }
+    override fun onUnbind(intent: android.content.Intent?): Boolean { instance = null; hideFloating(); return super.onUnbind(intent) }
+    override fun onDestroy() { instance = null; hideFloating(); scope.cancel(); super.onDestroy() }
     override fun onAccessibilityEvent(e: AccessibilityEvent) {}
     override fun onInterrupt() {}
 
@@ -169,9 +177,74 @@ class MacroService : AccessibilityService() {
         return false
     }
 
+    // ---------- 모드 2: 떠 있는 버튼 → 아래까지 스크롤 캡처 ----------
+    private var floating: View? = null
+    private val wm get() = getSystemService(WINDOW_SERVICE) as WindowManager
+    private fun onMain(r: () -> Unit) { Handler(Looper.getMainLooper()).post(r) }
+
+    fun showFloating() = onMain {
+        if (floating != null) return@onMain
+        val d = resources.displayMetrics.density
+        val size = (64 * d).toInt()
+        val v = TextView(this).apply {
+            text = "캡처"; setTextColor(Color.WHITE); textSize = 14f; gravity = Gravity.CENTER
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(0xDD5B47A6.toInt()) }
+        }
+        val lp = WindowManager.LayoutParams(
+            size, size, WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
+            PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = resources.displayMetrics.widthPixels - size - (16 * d).toInt()
+            y = resources.displayMetrics.heightPixels / 2
+        }
+        var sx = 0f; var sy = 0f; var ox = 0; var oy = 0; var moved = false
+        v.setOnTouchListener { _, e ->
+            when (e.action) {
+                MotionEvent.ACTION_DOWN -> { sx = e.rawX; sy = e.rawY; ox = lp.x; oy = lp.y; moved = false }
+                MotionEvent.ACTION_MOVE -> {
+                    val dx = e.rawX - sx; val dy = e.rawY - sy
+                    if (Math.abs(dx) > 15 || Math.abs(dy) > 15) moved = true
+                    if (moved) { lp.x = ox + dx.toInt(); lp.y = oy + dy.toInt(); wm.updateViewLayout(v, lp) }
+                }
+                MotionEvent.ACTION_UP -> if (!moved) onFloatingClick()
+            }
+            true
+        }
+        wm.addView(v, lp)
+        floating = v
+    }
+
+    fun hideFloating() = onMain {
+        floating?.let { runCatching { wm.removeView(it) } }
+        floating = null
+    }
+
+    private fun onFloatingClick() {
+        if (running) return
+        val p = Prefs(this)
+        job = scope.launch {
+            try {
+                onMain { floating?.visibility = View.INVISIBLE } // 캡처에 버튼이 찍히지 않게
+                delay(500)
+                val img = scrollCapture(p, force = true, fromTop = p.m2Top)
+                    ?: run { toast("캡처 실패"); return@launch }
+                save(img, 0, "s")
+                toast("저장 완료: ${img.width}x${img.height}")
+            } catch (e: CancellationException) {
+                toast("중지됨")
+            } catch (t: Throwable) {
+                toast("오류: ${t.message}")
+            } finally {
+                onMain { floating?.visibility = View.VISIBLE }
+            }
+        }
+    }
+
     // ---------- 스크롤 캡처 ----------
-    private suspend fun scrollCapture(p: Prefs): Bitmap? {
-        if (!p.scroll) return shot() // 스크롤 없이 현재 화면 1장
+    private suspend fun scrollCapture(p: Prefs, force: Boolean = false, fromTop: Boolean = true): Bitmap? {
+        if (!p.scroll && !force) return shot() // 스크롤 없이 현재 화면 1장
         val first0 = shot() ?: return null
         val top = (first0.height * 0.04).toInt()
         val bottom = (first0.height * 0.05).toInt()
@@ -181,7 +254,7 @@ class MacroService : AccessibilityService() {
         // 맨 위로 이동 (더 안 움직일 때까지)
         var prevL = Stitcher.luma(first0, top, bottom)
         var first = first0
-        for (i in 0 until 8) {
+        for (i in 0 until (if (fromTop) 8 else 0)) {
             if (!swipe(w, first0.height, down = true)) break
             delay(1200)
             val b = shot() ?: break

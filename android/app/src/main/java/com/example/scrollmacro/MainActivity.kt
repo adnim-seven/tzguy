@@ -21,7 +21,7 @@ class MainActivity : Activity() {
             root.addView(this)
         }
 
-        label("② 이미지 변화 확인용 탭 위치 (화면 대비 %, 오른쪽 사진 넘김 영역=75/34)")
+        label("━━ 모드 1: 자동 반복 ━━\n② 이미지 변화 확인용 탭 위치 (화면 대비 %, 오른쪽 사진 넘김 영역=75/34)")
         val tapX = field("가로 X %", p.tapX.toString(), true)
         val tapY = field("세로 Y %", p.tapY.toString(), true)
         val maxTaps = field("안 바뀌면 재탭 최대 횟수", p.maxTaps.toString(), true)
@@ -54,7 +54,7 @@ class MainActivity : Activity() {
         }
 
         root.addView(Button(this).apply {
-            text = "시작 (5초 뒤 현재 화면에서 실행)"
+            text = "모드 1 시작 (5초 뒤 현재 화면에서 자동 반복)"
             setOnClickListener {
                 save()
                 val svc = MacroService.instance
@@ -65,6 +65,21 @@ class MainActivity : Activity() {
         root.addView(Button(this).apply {
             text = "오늘 횟수 초기화"
             setOnClickListener { p.resetToday(); toast("오늘 횟수를 0으로 초기화했습니다") }
+        })
+        label("━━ 모드 2: 캡처 버튼을 누르면 아래까지 스크롤 캡처 ━━")
+        val m2top = CheckBox(this).apply { text = "캡처 전에 맨 위로 올리기 (끄면 현재 위치부터 아래로)"; isChecked = p.m2Top; root.addView(this) }
+        root.addView(Button(this).apply {
+            text = "모드 2 켜기 (화면에 캡처 버튼 표시)"
+            setOnClickListener {
+                p.m2Top = m2top.isChecked; save()
+                val svc = MacroService.instance
+                if (svc == null) toast("먼저 접근성에서 ScrollMacro를 켜세요")
+                else { svc.showFloating(); toast("대상 앱으로 이동 후 '캡처' 버튼을 누르세요") }
+            }
+        })
+        root.addView(Button(this).apply {
+            text = "모드 2 끄기 (캡처 버튼 숨기기)"
+            setOnClickListener { MacroService.instance?.hideFloating() }
         })
         root.addView(Button(this).apply { text = "중지"; setOnClickListener { MacroService.instance?.stop() } })
         root.addView(Button(this).apply {

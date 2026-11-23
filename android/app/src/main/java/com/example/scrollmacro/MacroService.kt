@@ -16,7 +16,7 @@ import kotlinx.coroutines.*
 import kotlin.coroutines.resume
 
 /**
- * 한 라운드:  버튼 클릭 → 상단 이미지가 바뀌고 안정될 때까지 대기 → 스크롤 캡처 → '다음' 버튼 클릭
+ * 한 라운드: 캡처 → 지정 위치 탭(안 바뀌면 재탭) → 이미지 변경 확인 → 캡처 → 다음 버튼 클릭 → 로딩 대기
  */
 class MacroService : AccessibilityService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -49,24 +49,34 @@ class MacroService : AccessibilityService() {
         for (round in 1..p.rounds) {
             toast("라운드 $round / ${p.rounds}")
 
-            // 1) 클릭 전 상단 이미지 기록
+            // 1) 탭 전 화면 캡처
+            if (p.captureFirst) {
+                val img = scrollCapture(p) ?: run { toast("캡처 실패"); return }
+                save(img, round, "a")
+            }
+
+            // 2~4) 중앙 지정 위치 탭 → 상단 이미지가 바뀌었는지 확인, 안 바뀌면 다시 탭
             val before = topLuma(p) ?: run { toast("스크린샷 실패"); return }
+            var changed = false
+            for (attempt in 1..p.maxTaps) {
+                tap(p.tapX, p.tapY)
+                if (waitChangedAndStable(p, before, p.tapWaitSec)) { changed = true; break }
+                toast("이미지 안 바뀜 → 다시 탭 ($attempt/${p.maxTaps})")
+            }
+            if (!changed) { toast("탭을 ${p.maxTaps}번 했지만 이미지가 안 바뀌어 종료"); return }
 
-            // 2) 버튼 클릭
-            if (!clickByText(p.btn)) { toast("버튼 '${p.btn}'을(를) 찾지 못해 종료"); return }
-
-            // 3) 상단 이미지가 바뀌고 → 더 이상 안 바뀔 때까지 대기
-            if (!waitChangedAndStable(p, before)) { toast("상단 이미지가 ${p.waitSec}초 안에 안 바뀌어 종료"); return }
-
-            // 4) 스크롤 캡처 후 저장
+            // 5) 바뀌었으면 캡처
             val img = scrollCapture(p) ?: run { toast("캡처 실패"); return }
-            save(img, round)
+            save(img, round, "b")
 
-            // 5) 다음 버튼 (마지막 라운드가 아니면)
+            // 5) 다음 넘어가기 버튼 클릭
             if (round < p.rounds) {
-                val label = p.next.ifBlank { p.btn }
-                if (!clickByText(label)) { toast("다음 버튼 '$label'을(를) 찾지 못해 종료"); return }
+                val ok = if (p.next.isNotBlank()) clickByText(p.next) else tap(p.nextX, p.nextY)
+                if (!ok) { toast("다음 버튼을 누르지 못해 종료"); return }
+
+                // 6) 다음 화면 이미지 로딩 대기
                 delay(1500)
+                if (!waitStable(p, p.waitSec)) { toast("로딩이 ${p.waitSec}초 안에 안 끝나 종료"); return }
             }
         }
         toast("모두 완료")
@@ -74,15 +84,19 @@ class MacroService : AccessibilityService() {
 
     // ---------- 상단 이미지 변화 감지 ----------
     private var statusTop = 0
+    private var screenW = 0
+    private var screenH = 0
     private suspend fun topLuma(p: Prefs): Stitcher.Luma? {
         val bmp = shot() ?: return null
+        screenW = bmp.width; screenH = bmp.height
         statusTop = (bmp.height * 0.04).toInt()
         val end = (bmp.height * p.topPct / 100.0).toInt().coerceAtLeast(statusTop + 50)
         return Stitcher.luma(bmp, statusTop, bmp.height - end)
     }
 
-    private suspend fun waitChangedAndStable(p: Prefs, before: Stitcher.Luma): Boolean {
-        val deadline = System.currentTimeMillis() + p.waitSec * 1000L
+    /** before 와 달라진 뒤, 연속 2번 같아질 때(=다 바뀜)까지 대기. 시간 내 못 하면 false */
+    private suspend fun waitChangedAndStable(p: Prefs, before: Stitcher.Luma, timeoutSec: Int): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutSec * 1000L
         var changed = false
         var prev: Stitcher.Luma? = null
         var stableCount = 0
@@ -92,13 +106,40 @@ class MacroService : AccessibilityService() {
             if (!changed) {
                 if (Stitcher.diff(before, cur) > 3.0) { changed = true; prev = cur }
             } else {
-                // 변경 후 연속 2번 같으면 '다 바뀜'
                 if (Stitcher.diff(prev!!, cur) < 0.7) stableCount++ else stableCount = 0
                 prev = cur
                 if (stableCount >= 2) return true
             }
         }
         return false
+    }
+
+    /** 이미지가 더 이상 변하지 않을 때까지 대기 (로딩 완료) */
+    private suspend fun waitStable(p: Prefs, timeoutSec: Int): Boolean {
+        val deadline = System.currentTimeMillis() + timeoutSec * 1000L
+        var prev = topLuma(p) ?: return false
+        var stableCount = 0
+        while (System.currentTimeMillis() < deadline) {
+            delay(1200)
+            val cur = topLuma(p) ?: continue
+            if (Stitcher.diff(prev, cur) < 0.7) stableCount++ else stableCount = 0
+            prev = cur
+            if (stableCount >= 2) return true
+        }
+        return false
+    }
+
+    // ---------- 좌표 탭 (화면 대비 %) ----------
+    private suspend fun tap(xPct: Int, yPct: Int): Boolean = suspendCancellableCoroutine { c ->
+        val x = screenW * xPct / 100f; val y = screenH * yPct / 100f
+        val path = Path().apply { moveTo(x, y) }
+        val g = GestureDescription.Builder()
+            .addStroke(GestureDescription.StrokeDescription(path, 0, 60)).build()
+        val ok = dispatchGesture(g, object : GestureResultCallback() {
+            override fun onCompleted(d: GestureDescription?) { if (c.isActive) c.resume(true) }
+            override fun onCancelled(d: GestureDescription?) { if (c.isActive) c.resume(false) }
+        }, null)
+        if (!ok && c.isActive) c.resume(false)
     }
 
     // ---------- 버튼 클릭 ----------
@@ -178,8 +219,8 @@ class MacroService : AccessibilityService() {
         if (!ok && c.isActive) c.resume(false)
     }
 
-    private fun save(bmp: Bitmap, round: Int) {
-        val name = "scroll_${System.currentTimeMillis()}_r$round.png"
+    private fun save(bmp: Bitmap, round: Int, tag: String) {
+        val name = "scroll_${System.currentTimeMillis()}_r${round}$tag.png"
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, name)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")

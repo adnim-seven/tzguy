@@ -1,0 +1,17 @@
+{
+  "condition": {
+    "type": "image",
+    "template": "trigger.png",
+    "threshold": 0.9
+  },
+  "scroll": {
+    "region": [100, 100, 1200, 800],
+    "click_to_focus": [700, 500],
+    "scroll_clicks": 5,
+    "delay": 0.6,
+    "max_pages": 30
+  },
+  "poll_interval": 1.0,
+  "cooldown": 30,
+  "output_dir": "captures"
+}

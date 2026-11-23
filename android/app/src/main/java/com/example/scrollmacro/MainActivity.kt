@@ -21,7 +21,7 @@ class MainActivity : Activity() {
             root.addView(this)
         }
 
-        label("② 이미지 변화 확인용 탭 위치 (화면 대비 %, 중앙=50/50)")
+        label("② 이미지 변화 확인용 탭 위치 (화면 대비 %, 오른쪽 사진 넘김 영역=75/34)")
         val tapX = field("가로 X %", p.tapX.toString(), true)
         val tapY = field("세로 Y %", p.tapY.toString(), true)
         val maxTaps = field("안 바뀌면 재탭 최대 횟수", p.maxTaps.toString(), true)
@@ -43,7 +43,7 @@ class MainActivity : Activity() {
 
         fun n(e: EditText, d: Int, lo: Int = 0, hi: Int = 100000) = e.text.toString().toIntOrNull()?.coerceIn(lo, hi) ?: d
         fun save() {
-            p.tapX = n(tapX, 50, 0, 100); p.tapY = n(tapY, 50, 0, 100)
+            p.tapX = n(tapX, 75, 0, 100); p.tapY = n(tapY, 50, 0, 100)
             p.maxTaps = n(maxTaps, 5, 1); p.tapWaitSec = n(tapWait, 4, 1)
             p.next = next.text.toString().trim()
             p.nextX = n(nextX, 90, 0, 100); p.nextY = n(nextY, 90, 0, 100)

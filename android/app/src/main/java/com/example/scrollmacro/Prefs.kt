@@ -9,7 +9,7 @@ class Prefs(ctx: Context) {
     private fun si(k: String, v: Int) = sp.edit().putInt(k, v).apply()
 
     /** 이미지 변화를 확인하려고 누를 위치 (화면 대비 %) */
-    var tapX: Int get() = i("tapX", 50); set(v) = si("tapX", v)
+    var tapX: Int get() = i("tapX", 75); set(v) = si("tapX", v)
     var tapY: Int get() = i("tapY", 34); set(v) = si("tapY", v)
     /** 이미지가 안 바뀌면 다시 탭하는 최대 횟수 / 탭 후 변화를 기다리는 시간(초) */
     var maxTaps: Int get() = i("maxTaps", 5); set(v) = si("maxTaps", v)

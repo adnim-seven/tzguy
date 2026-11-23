@@ -109,13 +109,20 @@ class MacroService : AccessibilityService() {
             if (!changed) {
                 if (Stitcher.diff(before, cur) > 3.0) { changed = true; prev = cur }
             } else {
-                if (Stitcher.diff(prev!!, cur) < 0.7 && !Stitcher.isBlank(cur)) stableCount++ else stableCount = 0
+                stableCount = nextStable(stableCount, Stitcher.diff(prev!!, cur) < 0.7)
                 prev = cur
-                if (stableCount >= 2) return true
+                if (loaded(stableCount, cur)) return true
             }
         }
         return false
     }
+
+    /** 같은 화면이 연속으로 나온 횟수 갱신 (달라지면 0부터) */
+    private fun nextStable(count: Int, same: Boolean): Int = if (same) count + 1 else 0
+
+    /** 사진: 연속 2번 같으면 로딩 끝. 흰 화면: 연속 5번(약 6초) 같아야 흰 배경 사진으로 간주 */
+    private fun loaded(count: Int, cur: Stitcher.Luma): Boolean =
+        count >= if (Stitcher.isBlank(cur)) 5 else 2
 
     /** 이미지가 더 이상 변하지 않을 때까지 대기 (로딩 완료) */
     private suspend fun waitStable(p: Prefs, timeoutSec: Int): Boolean {
@@ -125,9 +132,9 @@ class MacroService : AccessibilityService() {
         while (System.currentTimeMillis() < deadline) {
             delay(1200)
             val cur = topLuma(p) ?: continue
-            if (Stitcher.diff(prev, cur) < 0.7 && !Stitcher.isBlank(cur)) stableCount++ else stableCount = 0
+            stableCount = nextStable(stableCount, Stitcher.diff(prev, cur) < 0.7)
             prev = cur
-            if (stableCount >= 2) return true
+            if (loaded(stableCount, cur)) return true
         }
         return false
     }

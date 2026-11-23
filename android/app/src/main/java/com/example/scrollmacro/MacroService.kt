@@ -49,6 +49,9 @@ class MacroService : AccessibilityService() {
         for (round in 1..p.rounds) {
             toast("라운드 $round / ${p.rounds}")
 
+            // 첫 라운드는 사진이 뜰 때까지(흰색 아님 + 안정) 기다린 뒤 캡처
+            if (round == 1 && !waitStable(p, p.waitSec)) { toast("로딩이 ${p.waitSec}초 안에 안 끝나 종료"); return }
+
             // 1) 탭 전 화면 캡처
             if (p.captureFirst) {
                 val img = scrollCapture(p) ?: run { toast("캡처 실패"); return }
